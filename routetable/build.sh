@@ -1,11 +1,11 @@
 #!/bin/sh
 
 MODULE=routetable
-VERSION=0.3
-TITLE="路由表设置"
-DESCRIPTION=路由流量指明灯
+VERSION=0.7
+TITLE="路由表"
+DESCRIPTION=系统路由表设置
 HOME_URL=Module_routetable.asp
-CHANGELOG="修复重装系统后的启动问题"
+CHANGELOG="优化接口获取"
 
 # Check and include base
 DIR="$( cd "$( dirname "$BASH_SOURCE[0]" )" && pwd )"
@@ -17,7 +17,7 @@ DIR="$( cd "$( dirname "$BASH_SOURCE[0]" )" && pwd )"
 cd $DIR
 
 # build bin
-sh $DIR/build/build routetable
+sh $DIR/build/build $MODULE
 
 # do something here
 

@@ -8,16 +8,16 @@
 # See /LICENSE for more information.
 #
 
-START=99
+START=80
 STOP=15
 
 source /koolshare/scripts/base.sh
-eval `dbus export sgame`
+eval `dbus export routetable_`
 
 start(){
-	[ "$sgame_basic_enable" == "1" ] && /koolshare/scripts/sgame_config.sh
+	[ "$routetable_enable" == "1" ] && /koolshare/scripts/routetable_config.sh
 }
 
 stop(){
-	/koolshare/scripts/sgame_config.sh stop
+	/koolshare/scripts/routetable_config.sh
 }

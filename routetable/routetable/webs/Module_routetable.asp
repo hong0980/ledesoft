@@ -259,33 +259,34 @@
 				wans_value[i] = wans[i][0];
 			}
 		}
+
 		function get_wans_list(){
-			var id = parseInt(Math.random() * 100000000);
-			var postData = {"id": id, "method": "routetable_getwans.sh", "params":[], "fields": ""};
+			var id2 = parseInt(Math.random() * 100000000);
+			var postData2 = {"id": id2, "method": "routetable_getwan.sh", "params":[], "fields": ""};
 			$.ajax({
 				type: "POST",
 				url: "/_api/",
 				async:true,
 				cache:false,
-				data: JSON.stringify(postData),
+				data: JSON.stringify(postData2),
 				dataType: "json",
 				success: function(response){
 					if (response.result != "-1"){
-						wans = eval(Base64.decode(response.result));
-						for ( var i = 0; i < wans.length; i++ ){
+						wans = response.result.split( '>' );
+						//console.log(s3);
+						for ( var i = 0; i < wans.length; ++i ) {
 							var wans_temp = [];
-							wans_temp[0] = wans[i][0];
-							wans_temp[1] = wans[i][0];
+							wans_temp[0] = wans[i]
+							wans_temp[1] = wans[i]
 							option_wan.push(wans_temp);
+							//$("#_wireguard_basic_vpn").append("<option value='" + s2[i] + "'>" + s2[i] + "</option>");
 						}
-						option_wan_name  = wans.sort();
-						//console.log(option_wan)
-						//console.log(option_wan_name)
+						option_wan_name = wans.sort();
 						table2.setup();
 						mwan_set();
 					}
 				},
-				timeout:1000
+				timeout:5000
 			});
 		}
 
