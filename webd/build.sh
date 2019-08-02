@@ -1,11 +1,10 @@
 #!/bin/sh
 
-MODULE=unifi
-VERSION=0.8
-TITLE="Unifi Controller"
-DESCRIPTION=Debian系统和Unifi控制器
-HOME_URL=Module_unifi.asp
-CHANGELOG="升级Debian版本"
+MODULE=webd
+VERSION=0.1
+TITLE="我的网盘"
+DESCRIPTION="小巧便携的网盘"
+HOME_URL=Module_webd.asp
 
 # Check and include base
 DIR="$( cd "$( dirname "$BASH_SOURCE[0]" )" && pwd )"
@@ -15,9 +14,6 @@ DIR="$( cd "$( dirname "$BASH_SOURCE[0]" )" && pwd )"
 
 # change to module directory
 cd $DIR
-
-# build bin
-sh $DIR/build/build $MODULE
 
 # do something here
 

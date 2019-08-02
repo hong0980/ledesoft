@@ -1,9 +1,9 @@
 {
-"version":"0.6",
-"md5":"1185e11cf3b923f0677cb7acb9791223",
+"version":"0.8",
+"md5":"5564e7b29d95e2e69f43d92f57fc6496",
 "home_url":"Module_unifi.asp",
 "title":"Unifi Controller",
 "description":"Debian系统和Unifi控制器",
-"changelog":"修复初始安装问题",
-"build_date":"2018-04-24_15:44:59"
+"changelog":"升级Debian版本",
+"build_date":"2019-04-06_23:16:02"
 }
