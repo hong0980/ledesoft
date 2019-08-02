@@ -10,15 +10,6 @@ cp -rf /tmp/policy/scripts/* $KSROOT/scripts/
 cp -rf /tmp/policy/webs/* $KSROOT/webs/
 cp /tmp/policy/uninstall.sh $KSROOT/scripts/uninstall_policy.sh
 
-check_fix(){
-	local fwlocal checkversion
-	fwlocal=`cat /etc/openwrt_release|grep DISTRIB_RELEASE|cut -d "'" -f 2|cut -d "V" -f 2`
-	checkversion=`versioncmp $fwlocal 2.9`
-	[ "$checkversion" == "1" ] && cp -rf /tmp/policy/fix/mwan3.sh /lib/mwan3/mwan3.sh
-}
-
-check_fix
-
 chmod +x $KSROOT/scripts/policy_*
 
 dbus set softcenter_module_policy_description=多运营商自动分流

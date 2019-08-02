@@ -1,11 +1,11 @@
 #!/bin/sh
 
-MODULE=policy
-VERSION=0.7
-TITLE="策略路由"
-DESCRIPTION=多运营商自动分流
-HOME_URL=Module_policy.asp
-CHANGELOG="增加客户端分流"
+MODULE=relay
+VERSION=0.1
+TITLE="瑞士军刀"
+DESCRIPTION="端口映射、中转流量"
+HOME_URL=Module_relay.asp
+CHANGELOG=""
 
 # Check and include base
 DIR="$( cd "$( dirname "$BASH_SOURCE[0]" )" && pwd )"
@@ -17,7 +17,7 @@ DIR="$( cd "$( dirname "$BASH_SOURCE[0]" )" && pwd )"
 cd $DIR
 
 # build bin
-sh $DIR/build/build policy
+sh $DIR/build/build $MODULE
 
 # do something here
 
