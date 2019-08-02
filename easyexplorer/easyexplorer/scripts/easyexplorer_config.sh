@@ -24,8 +24,8 @@ EOF
 }
 
 start_easyexplorer(){
-	#easyexplorer /tmp/etc/easyexplorer.json >/dev/null 2>&1 &
-	easyexplorer -u "$easyexplorer_token" -share "$easyexplorer_folder" >/dev/null 2>&1 &
+	token=`echo $easyexplorer_token | sed s/[[:space:]]//g`
+	start-stop-daemon -S -b -q -x $KSROOT/bin/easyexplorer -- -u "$token" -share "$easyexplorer_folder" -c /tmp >/dev/null
 }
 
 stop_easyexplorer(){
@@ -33,7 +33,7 @@ stop_easyexplorer(){
 }
 
 creat_start_up(){
-	[ ! -L "/etc/rc.d/S99easyexplorer.sh" ] && ln -sf /koolshare/init.d/S88easyexplorer.sh /etc/rc.d/S99easyexplorer.sh
+	[ ! -L "/etc/rc.d/S99easyexplorer.sh" ] && ln -sf /koolshare/init.d/S99easyexplorer.sh /etc/rc.d/S99easyexplorer.sh
 }
 
 del_start_up(){

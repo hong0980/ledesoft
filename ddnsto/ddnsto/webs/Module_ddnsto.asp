@@ -120,11 +120,12 @@ function save(){
 }
 </script>
 <div class="box">
-<div class="heading">ddnsto <a href="#/soft-center.asp" class="btn" style="float:right;border-radius:3px;margin-right:5px;margin-top:0px;">返回</a></div>
+<div class="heading">ddnsto 远程穿透<a href="#/soft-center.asp" class="btn" style="float:right;border-radius:3px;margin-right:5px;margin-top:0px;">返回</a></div>
 <div class="content">
 	<span class="col" style="line-height:30px;width:700px">
 	ddnsto是koolshare小宝开发的，支持http2的快速穿透。<br />
-	你需要先到<a id="gfw_number" href="https://ddns.to" target="_blank"> https://ddns.to </a>注册，然后在本插件内填入帐号和密码，再登录<a id="gfw_number" href="https://ddns.to" target="_blank"> https://ddns.to </a>设置穿透。<br />
+	你需要到<a id="gfw_number" href="https://www.ddnsto.com" target="_blank"> https://www.ddnsto.com </a>扫码登录，以获取token。<br />
+	<font color="#FF3300">注意：</font>因验证方式改变，原有Token和设置失效，最新插件需要您重新登录控制台获取Token并重新设置。
 </div>
 </div>
 

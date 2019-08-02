@@ -1,9 +1,9 @@
 {
-"version":"0.1",
-"md5":"241ab95abf082074bc36f59d6a3587a9",
+"version":"0.4",
+"md5":"b33613acacda12f8dc30a6efa9f65177",
 "home_url":"Module_entware.asp",
 "title":"Entware",
 "description":"Entware环境和扩展",
-"changelog":"",
-"build_date":"2018-01-05_19:19:30"
+"changelog":"更新ONMP",
+"build_date":"2018-11-11_15:42:40"
 }
