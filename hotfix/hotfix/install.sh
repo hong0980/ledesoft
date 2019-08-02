@@ -79,6 +79,16 @@ if [ "$version_local" == "2.17" ];then
 		rm -rf /tmp/luci-*
 fi
 
+# host fix for firmware under 2.26 for ATT Theme Chinese localization (2019-1-1 23:35:10)
+if [ "$version_local" == "2.26" ];then
+		sed '206 i<script src="<%=url("'admin/translations'", luci.i18n.context.lang)%><%# ?v=PKG_VERSION %>"></script>' -i /usr/lib/lua/luci/view/themes/advancedtomato/header.htm
+fi
+
+# host fix for firmware 2.30 opkg check filed (2019-3-10 11:15:10)
+if [ "$version_local" == "2.30" ];then
+	sed -i 's/openwrt.proxy.ustclug.org/downloads.openwrt.org/g' /etc/opkg/distfeeds.conf
+fi
+
 # ====================== fix end ===============================
 
 sleep 1
