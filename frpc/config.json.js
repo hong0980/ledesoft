@@ -1,9 +1,9 @@
 {
-"version":"1.9",
-"md5":"b7fe689090b620de450908371148b83a",
+"version":"2.1",
+"md5":"47b813f9d36a802b73b0a7929f7bf917",
 "home_url":"Module_frpc.asp",
 "title":"frpc",
 "description":"FRPC内网穿透工具",
-"changelog":"修复一些web错误",
-"build_date":"2018-04-16_18:03:00"
+"changelog":"增加自定义配置功能",
+"build_date":"2018-06-14_21:13:13"
 }

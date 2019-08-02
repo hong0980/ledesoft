@@ -1,9 +1,9 @@
 {
-"version":"0.2.6",
-"md5":"52b269e1409c4aef9204e605630d058b",
+"version":"0.2.7",
+"md5":"b42b2d325dcf25573a9546bce6f32740",
 "home_url":"Module_fwupdate.asp",
 "title":"固件更新",
 "description":"在线更新路由器固件",
 "changelog":"",
-"build_date":"2017-11-27_13:01:43"
+"build_date":"2019-03-10_11:29:50"
 }

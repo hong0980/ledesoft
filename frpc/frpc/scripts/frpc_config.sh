@@ -9,6 +9,14 @@ version=`$KSROOT/frpc/frpc --version`
 dbus set frpc_version=$version
 
 write_conf(){
+  if [ "`dbus get frpc_customize_conf`"x = "1"x ];then
+    _frpc_customize_conf=`dbus get frpc_customize_config | base64_decode` || "未发现配置文件"
+    cat > $conf_file<<-EOF
+# frpc custom configuration
+${_frpc_customize_conf}
+EOF
+  else
+    # frpc configuration
     echo "[common]" > $conf_file
     dbus list frpc|grep "frpc_common"|grep -v '=$'|grep -v 'srlist'|sed 's/=/ = /g'|sed "s/frpc_common_//g" >> $conf_file
     for i in `dbus get frpc_srlist|sed 's/>/\n/g'`;do
@@ -20,7 +28,7 @@ write_conf(){
         echo "remote_port = `echo $i|cut -d'<' -f6`" >> $conf_file
         use_compression=`echo $i|cut -d'<' -f7`
         use_encryption=`echo $i|cut -d'<' -f8`
-        privilege_mode=`echo $i|cut -d'<' -f9`
+        #privilege_mode=`echo $i|cut -d'<' -f9`
         if [ $use_compression == "1" ];then
             echo "use_compression = true" >> $conf_file
         else
@@ -33,7 +41,7 @@ write_conf(){
         fi
     done
     sed -i '/= $/d' $conf_file
-
+  fi
 }
 
 start_frpc(){

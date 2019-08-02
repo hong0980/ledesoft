@@ -1,11 +1,11 @@
 #!/bin/sh
 
 MODULE=frpc
-VERSION=1.9
+VERSION=2.1
 TITLE=frpc
 DESCRIPTION=FRPC内网穿透工具
 HOME_URL=Module_frpc.asp
-CHANGELOG="修复一些web错误"
+CHANGELOG="增加自定义配置功能"
 
 # Check and include base
 DIR="$( cd "$( dirname "$BASH_SOURCE[0]" )" && pwd )"
