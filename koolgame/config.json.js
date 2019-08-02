@@ -1,9 +1,9 @@
 {
-"version":"1.0.3",
-"md5":"4a4579453ad7d7bb55df816a96da7c55",
+"version":"1.0.8",
+"md5":"de2bac13f13301434a08958cff339fbe",
 "home_url":"Module_koolgame.asp",
-"title":"游戏加速",
+"title":"koolgame 游戏加速",
 "description":"小宝开发的游戏加速V2",
-"changelog":"",
-"build_date":"2018-04-15_01:43:18"
+"changelog":"修复BUG",
+"build_date":"2018-10-18_19:08:26"
 }

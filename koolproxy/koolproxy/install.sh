@@ -14,14 +14,11 @@ rm -rf $KSROOT/scripts/Koolproxy_* >/dev/null 2>&1
 rm -rf $KSROOT/webs/module_Koolproxy.asp >/dev/null 2>&1
 rm -rf $KSROOT/koolproxy/koolproxy >/dev/null 2>&1
 rm -rf $KSROOT/koolproxy/*.sh >/dev/null 2>&1
-rm -rf $KSROOT/koolproxy/data/dnsmasq.adblock >/dev/null 2>&1
 rm -rf $KSROOT/koolproxy/data/gen_ca.sh >/dev/null 2>&1
 rm -rf $KSROOT/koolproxy/data/koolproxy_ipset.conf >/dev/null 2>&1
 rm -rf $KSROOT/koolproxy/data/openssl.cnf >/dev/null 2>&1
 rm -rf $KSROOT/koolproxy/data/version >/dev/null 2>&1
-rm -rf $KSROOT/koolproxy/data/rules/daily.txt >/dev/null 2>&1
-rm -rf $KSROOT/koolproxy/data/rules/koolproxy.txt >/dev/null 2>&1
-rm -rf $KSROOT/koolproxy/data/rules/*.dat >/dev/null 2>&1
+rm -rf $KSROOT/koolproxy/data/rules/* >/dev/null 2>&1
 
 # copy new files
 cd /tmp
@@ -30,7 +27,6 @@ mkdir -p $KSROOT/init.d
 mkdir -p $KSROOT/koolproxy/data
 cp -rf /tmp/koolproxy/scripts/* $KSROOT/scripts/
 cp -rf /tmp/koolproxy/webs/* $KSROOT/webs/
-cp -rf /tmp/koolproxy/res/* $KSROOT/res/
 cp -rf /tmp/koolproxy/init.d/* $KSROOT/init.d/
 if [ ! -f $KSROOT/koolproxy/data/rules/user.txt ];then
 	cp -rf /tmp/koolproxy/* $KSROOT/
@@ -69,7 +65,10 @@ dbus set softcenter_module_koolproxy_description=koolproxy
 dbus set softcenter_module_koolproxy_install=1
 dbus set softcenter_module_koolproxy_home_url="Module_koolproxy.asp"
 dbus set softcenter_module_koolproxy_name=koolproxy
-dbus set softcenter_module_koolproxy_version=3.7.2
-dbus set koolproxy_version=3.7.2
+dbus set softcenter_module_koolproxy_version=3.8.5
+dbus set koolproxy_version=3.8.5
 
 [ "$koolproxy_enable" == "1" ] && sh $KSROOT/koolproxy/kp_config.sh restart
+
+exit 0
+

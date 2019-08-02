@@ -5,12 +5,10 @@ source $KSROOT/bin/helper.sh
 eval `dbus export koolgame_`
 alias echo_date='echo 【$(date +%Y年%m月%d日\ %X)】:'
 lan_ipaddr=`uci get network.lan.ipaddr`
-ip_prefix_hex=`echo $lan_ipaddr | awk -F "." '{printf ("0x%02x", $1)} {printf ("%02x", $2)} {printf ("%02x", $3)} {printf ("00/0xffffff00")}'`
 LOCK_FILE=/var/lock/koolgame.lock
 LOG_FILE=/tmp/upload/koolgame_log.txt
 IFIP=`echo $koolgame_basic_server|grep -E "([0-9]{1,3}[\.]){3}[0-9]{1,3}|:"`
 mkdir -p /koolshare/configs
-
 ISP_DNS1=`cat /tmp/resolv.conf.auto|cut -d " " -f 2|grep -v 0.0.0.0|grep -v 127.0.0.1|sed -n 2p`
 ISP_DNS2=`cat /tmp/resolv.conf.auto|cut -d " " -f 2|grep -v 0.0.0.0|grep -v 127.0.0.1|sed -n 3p`
 # dns for china
@@ -154,6 +152,8 @@ create_dnsmasq_conf(){
 	echo "ipset=/.raw.githubusercontent.com/router" >> /tmp/wblist.conf
 	echo "server=/.apnic.net/127.0.0.1#7913" >> /tmp/wblist.conf
 	echo "ipset=/.apnic.net/router" >> /tmp/wblist.conf
+	echo "server=/.openwrt.org/127.0.0.1#7913" >> /tmp/wblist.conf
+	echo "ipset=/.openwrt.org/router" >> /tmp/wblist.conf	
 	# append white domain list,not through koolgame
 	wanwhitedomain=$(echo $koolgame_wan_white_domain | base64_decode)
 	if [ -n "$koolgame_wan_white_domain" ];then
@@ -249,27 +249,36 @@ start_koolgame(){
 flush_nat(){
 	echo_date 尝试先清除已存在的iptables规则，防止重复添加
 	# flush rules and set if any
-	iptables -t nat -D PREROUTING -p tcp -j KOOLGAME >/dev/null 2>&1
-	sleep 1
-	iptables -t nat -F KOOLGAME > /dev/null 2>&1 && iptables -t nat -X KOOLGAME > /dev/null 2>&1
-	iptables -t nat -F KOOLGAME_EXT > /dev/null 2>&1
-	iptables -t nat -F KOOLGAME_GAM > /dev/null 2>&1 && iptables -t nat -X KOOLGAME_GAM > /dev/null 2>&1
-	iptables -t mangle -D PREROUTING -p udp -j KOOLGAME >/dev/null 2>&1
+	iptables -t nat -D OUTPUT -j KOOLGAME > /dev/null 2>&1
+	iptables -t nat -D OUTPUT -p tcp -m set --match-set router dst -j REDIRECT --to-ports 3333 > /dev/null 2>&1
+	ip_nat_exist=`iptables -t nat -L PREROUTING | grep -c KOOLGAME`
+	ip_mangle_exist=`iptables -t mangle -L PREROUTING | grep -c KOOLGAME`
+	if [ -n "$ip_nat_exist" ]; then
+		for i in `seq $ip_nat_exist`
+		do
+			iptables -t nat -D PREROUTING -p tcp -j KOOLGAME >/dev/null 2>&1
+		done
+	fi
+
+	if [ -n "$ip_mangle_exist" ]; then
+		for i in `seq $ip_mangle_exist`
+		do
+			iptables -t mangle -D PREROUTING -p udp -j KOOLGAME >/dev/null 2>&1
+		done
+	fi
+
+	iptables -t nat -F KOOLGAME	>/dev/null 2>&1 && iptables -t nat -X KOOLGAME >/dev/null 2>&1
 	iptables -t mangle -F KOOLGAME >/dev/null 2>&1 && iptables -t mangle -X KOOLGAME >/dev/null 2>&1
-	iptables -t mangle -F KOOLGAME_GAM > /dev/null 2>&1 && iptables -t mangle -X KOOLGAME_GAM > /dev/null 2>&1
-	iptables -t nat -D OUTPUT -p tcp -m set --match-set router dst -j REDIRECT --to-ports 3333 >/dev/null 2>&1
-	iptables -t nat -F OUTPUT > /dev/null 2>&1
-	iptables -t nat -X KOOLGAME_EXT > /dev/null 2>&1
+	iptables -t mangle -F KOOLGAME_GAM >/dev/null 2>&1 && iptables -t mangle -X KOOLGAME_GAM >/dev/null 2>&1
+
 	# flush chromecast rule
-	kp_mode=`dbus get koolproxy_mode`
-	kp_enable=`iptables -t nat -L PREROUTING | grep KOOLPROXY |wc -l`
-	ss_chromecast=`uci -q get shadowsocks.@global[0].dns_53`
+	ss_chromecast=`dbus get ss_basic_chromecast`
 	ss_enable=`iptables -t nat -L SHADOWSOCKS 2>/dev/null |wc -l`
 	chromecast_nu=`iptables -t nat -L PREROUTING -v -n --line-numbers|grep "dpt:53"|awk '{print $1}'`
-	if [ "$kp_mode" != "2" ] || [ "$kp_enable" -eq 0 ]; then
+	if [ `dbus get koolproxy_enable` == "1" ]; then
 		[ -n "$chromecast_nu" ] && iptables -t nat -D PREROUTING $chromecast_nu >/dev/null 2>&1
 	else
-		if [ -z "$ss_chromecast" ] || [ "$ss_enable" -eq 0 ]; then
+		if [ "$ss_chromecast" == "0" ] || [ "$ss_enable" -eq 0 ]; then
 			[ -n "$chromecast_nu" ] && iptables -t nat -D PREROUTING $chromecast_nu >/dev/null 2>&1
 		fi
 	fi
@@ -282,39 +291,86 @@ flush_nat(){
 	ipset -F router >/dev/null 2>&1 && ipset -X router >/dev/null 2>&1
 
 	#remove_redundant_rule
-	ip_rule_exist=`/usr/sbin/ip rule show | grep "fwmark 0x7 lookup 310" | grep -c 310`
+	ip_rule_exist=`ip rule show | grep "fwmark 0x7 lookup 310" | grep -c 310`
 	if [ -n "ip_rule_exist" ];then
 		echo_date 清除重复的ip rule规则.
 		until [ "$ip_rule_exist" = 0 ]
 		do 
 			#ip rule del fwmark 0x07 table 310
-			/usr/sbin/ip rule del fwmark 0x07 table 310 pref 789
+			ip rule del fwmark 0x07 table 310 pref 789
 			ip_rule_exist=`expr $ip_rule_exist - 1`
 		done
 	fi
 
 	# remove_route_table
 	echo_date 删除ip route规则.
-	/usr/sbin/ip route del local 0.0.0.0/0 dev lo table 310 >/dev/null 2>&1
+	ip route del local 0.0.0.0/0 dev lo table 310 >/dev/null 2>&1
 }
 
 # creat ipset rules
 creat_ipset(){
 	echo_date 创建ipset名单
-	ipset -! create white_list nethash && ipset flush white_list
-	ipset -! create black_list nethash && ipset flush black_list
 	ipset -! create router nethash && ipset flush router
 	ipset -! create chnroute nethash && ipset flush chnroute
 	sed -e "s/^/add chnroute &/g" $KSROOT/configs/koolgame/chnroute.txt | awk '{print $0} END{print "COMMIT"}' | ipset -R
 }
 
+gen_special_ip() {
+	[ ! -z "$koolgame_basic_server_ip" ] && SERVER_IP=$koolgame_basic_server_ip || SERVER_IP=""
+	cat <<-EOF
+		0.0.0.0/8
+		10.0.0.0/8
+		100.64.0.0/10
+		127.0.0.0/8
+		169.254.0.0/16
+		172.16.0.0/12
+		192.0.0.0/24
+		192.0.2.0/24
+		192.31.196.0/24
+		192.52.193.0/24
+		192.88.99.0/24
+		192.168.0.0/16
+		192.175.48.0/24
+		198.18.0.0/15
+		198.51.100.0/24
+		203.0.113.0/24
+		224.0.0.0/4
+		240.0.0.0/4
+		255.255.255.255
+		223.5.5.5
+		223.6.6.6
+		114.114.114.114
+		114.114.115.115
+		1.2.4.8
+		210.2.4.8
+		112.124.47.27
+		114.215.126.16
+		180.76.76.76
+		119.29.29.29
+		$ISP_DNS1
+		$ISP_DNS2
+		$SERVER_IP
+EOF
+}
+
+gen_tg_ip() {
+	cat <<-EOF
+		149.154.0.0/16
+		91.108.4.0/22
+		91.108.56.0/24
+		109.239.140.0/24
+		67.198.55.0/24
+EOF
+}
+
 add_white_black_ip(){
-	# black ip/cidr
-	ip_tg="149.154.0.0/16 91.108.4.0/22 91.108.56.0/24 109.239.140.0/24 67.198.55.0/24"
-	for ip in $ip_tg
-	do
-		ipset -! add black_list $ip >/dev/null 2>&1
-	done
+	# black/white ip/cidr
+	ipset -! restore <<-EOF
+		create black_list hash:net hashsize 64
+		create white_list hash:net hashsize 64		
+		$(gen_tg_ip | sed -e "s/^/add black_list /")
+		$(gen_special_ip | sed -e "s/^/add white_list /")		
+EOF
 	
 	if [ ! -z $koolgame_wan_black_ip ];then
 		koolgame_wan_black_ip=`dbus get koolgame_wan_black_ip|base64_decode|sed '/\#/d'`
@@ -324,16 +380,6 @@ add_white_black_ip(){
 			ipset -! add black_list $ip >/dev/null 2>&1
 		done
 	fi
-	
-	# white ip/cidr
-	#ip1=$(nvram get wan0_ipaddr | cut -d"." -f1,2)
-	ip1=`cat /etc/config/pppoe|grep localip | awk '{print $4}'| cut -d"." -f1,2`
-	[ ! -z "$koolgame_basic_server_ip" ] && SERVER_IP=$koolgame_basic_server_ip || SERVER_IP=""
-	ip_lan="0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16 172.16.0.0/12 192.168.0.0/16 224.0.0.0/4 240.0.0.0/4 $ip1.0.0/16 $SERVER_IP 223.5.5.5 223.6.6.6 114.114.114.114 114.114.115.115 1.2.4.8 210.2.4.8 112.124.47.27 114.215.126.16 180.76.76.76 119.29.29.29 $ISP_DNS1 $ISP_DNS2"
-	for ip in $ip_lan
-	do
-		ipset -! add white_list $ip >/dev/null 2>&1
-	done
 	
 	if [ ! -z $koolgame_wan_white_ip ];then
 		koolgame_wan_white_ip=`echo $koolgame_wan_white_ip|base64_decode|sed '/\#/d'`
@@ -393,7 +439,6 @@ lan_acess_control(){
 		for acl in $acl_nu
 		do
 			ipaddr=`dbus get koolgame_acl_ip_$acl`
-			ipaddr_hex=`dbus get koolgame_acl_ip_$acl | awk -F "." '{printf ("0x%02x", $1)} {printf ("%02x", $2)} {printf ("%02x", $3)} {printf ("%02x\n", $4)}'`
 			proxy_mode=`dbus get koolgame_acl_mode_$acl`
 			proxy_name=`dbus get koolgame_acl_name_$acl`
 			mac=`dbus get koolgame_acl_mac_$acl`
@@ -401,12 +446,9 @@ lan_acess_control(){
 			[ -n "$ipaddr" ] && [ -z "$mac" ] && echo_date 加载ACL规则：【$ipaddr】模式为：$(get_mode_name $proxy_mode)
 			[ -z "$ipaddr" ] && [ -n "$mac" ] && echo_date 加载ACL规则：【$mac】模式为：$(get_mode_name $proxy_mode)
 			[ -n "$ipaddr" ] && [ -n "$mac" ] && echo_date 加载ACL规则：【$ipaddr】【$mac】模式为：$(get_mode_name $proxy_mode)
-			# acl in KOOLGAME
-			iptables -t nat -A KOOLGAME $(factor $ipaddr "-s") -p tcp -$(get_jump_mode $proxy_mode) $(get_action_chain $proxy_mode)
-			# acl in OUTPUT（used by koolproxy）
-			iptables -t nat -A KOOLGAME_EXT -p tcp  -m mark --mark "$ipaddr_hex" -$(get_jump_mode $proxy_mode) $(get_action_chain $proxy_mode)
 			# acl magic happens here
 			iptables -t mangle -A KOOLGAME $(factor $ipaddr "-s") $(factor $mac "-m mac --mac-source") -p udp -$(get_jump_mode $proxy_mode) $(get_action_chain $proxy_mode)
+			iptables -t mangle -A KOOLGAME $(factor $ipaddr "-s") $(factor $mac "-m mac --mac-source") -p tcp -$(get_jump_mode $proxy_mode) $(get_action_chain $proxy_mode)
 		done
 		echo_date 加载ACL规则：其余主机模式为：$(get_mode_name $koolgame_acl_default_mode)
 	else
@@ -417,30 +459,22 @@ lan_acess_control(){
 
 apply_nat_rules(){
 	#----------------------BASIC RULES---------------------
-	echo_date 写入iptables规则到nat表中...
-	# 创建KOOLGAME nat rule
-	iptables -t nat -N KOOLGAME
-	# 扩展
-	iptables -t nat -N KOOLGAME_EXT
-	# IP/cidr/白域名 白名单控制（不走koolgame）
-	iptables -t nat -A KOOLGAME -p tcp -m set --match-set white_list dst -j RETURN
-	#-----------------------FOR GAMEMODE---------------------
-	# 创建大陆白名单模式nat rule
-	iptables -t nat -N KOOLGAME_GAM
-	# IP/CIDR/域名 黑名单控制（走koolgame）
-	iptables -t nat -A KOOLGAME_GAM -p tcp -m set --match-set black_list dst -j REDIRECT --to-ports 3333
-	# cidr黑名单控制-chnroute（走koolgame）
-	iptables -t nat -A KOOLGAME_GAM -p tcp -m set ! --match-set chnroute dst -j REDIRECT --to-ports 3333
-
-	#load_tproxy
-	/usr/sbin/ip rule add fwmark 0x07 table 310 pref 789
-	/usr/sbin/ip route add local 0.0.0.0/0 dev lo table 310
-	# 创建游戏模式udp rule
+	echo_date 写入iptables规则到mangle表中...
+	# 创建KOOLGAME mangle rule
 	iptables -t mangle -N KOOLGAME
 	# IP/cidr/白域名 白名单控制（不走koolgame）
-	iptables -t mangle -A KOOLGAME -p udp -m set --match-set white_list dst -j RETURN
+	iptables -t mangle -A KOOLGAME -m set --match-set white_list dst -j RETURN
+	#-----------------------FOR GAMEMODE---------------------
 	# 创建游戏模式udp rule
 	iptables -t mangle -N KOOLGAME_GAM
+	# IP/CIDR/域名 黑名单控制（走koolgame）
+	iptables -t mangle -A KOOLGAME_GAM -p tcp -m set --match-set black_list dst -j TTL --ttl-set 188
+	# cidr黑名单控制-chnroute（走koolgame）
+	iptables -t mangle -A KOOLGAME_GAM -p tcp -m set ! --match-set chnroute dst -j TTL --ttl-set 188
+
+	#load_tproxy
+	ip rule add fwmark 0x07 table 310 pref 789
+	ip route add local 0.0.0.0/0 dev lo table 310
 	# IP/CIDR/域名 黑名单控制（走koolgame）
 	iptables -t mangle -A KOOLGAME_GAM -p udp -m set --match-set black_list dst -j TPROXY --on-port 3333 --tproxy-mark 0x07
 	# cidr黑名单控制-chnroute（走koolgame）
@@ -448,41 +482,29 @@ apply_nat_rules(){
 	#-------------------------------------------------------
 	# 局域网黑名单（不走koolgame）/局域网黑名单（走koolgame）
 	lan_acess_control
-	#-----------------------FOR ROUTER---------------------
-	# router itself
-	iptables -t nat -A OUTPUT -p tcp -m set --match-set router dst -j REDIRECT --to-ports 3333
-	iptables -t nat -A OUTPUT -p tcp -m mark --mark $ip_prefix_hex -j KOOLGAME_EXT
-	#[ "$koolgame_basic_mode" != "4" ] && iptables -t nat -A OUTPUT -p tcp -m ttl --ttl-eq 160 -j KOOLGAME_EXT
-	
-	# 把最后剩余流量重定向到相应模式的nat表中对对应的主模式的链
-	iptables -t nat -A KOOLGAME -p tcp -j $(get_action_chain $koolgame_acl_default_mode)
-	iptables -t nat -A KOOLGAME_EXT -p tcp -j $(get_action_chain $koolgame_acl_default_mode)
-	# 如果是主模式游戏模式，则把KOOLGAME链中剩余udp流量转发给KOOLGAME_GAM链
-	# 如果主模式不是游戏模式，则不需要把KOOLGAME链中剩余udp流量转发给KOOLGAME_GAM，不然会造成其他模式主机的udp也走游戏模式
-	iptables -t mangle -A KOOLGAME -p udp -j $(get_action_chain $koolgame_acl_default_mode)
-	# 重定所有流量到 KOOLGAME
+	# 其余主机默认模式
+	iptables -t mangle -A KOOLGAME -j $(get_action_chain $koolgame_acl_default_mode)
+	# 重定向所有流量到透明代理端口
+	iptables -t nat -N KOOLGAME
+	iptables -t nat -A KOOLGAME -p tcp -m ttl --ttl-eq 188 -j REDIRECT --to 3333
+	#获取默认规则行号
+	PR_INDEX=`iptables -t nat -L PREROUTING|tail -n +3|sed -n -e '/^prerouting_rule/='`
+	[ -n "$BL_INDEX" ] && let RULE_INDEX=$BL_INDEX+1
 	KP_INDEX=`iptables -t nat -L PREROUTING|tail -n +3|sed -n -e '/^KOOLPROXY/='`
-	if [ -n "$KP_INDEX" ]; then
-		let KP_INDEX+=1
-		#确保添加到KOOLPROXY规则之后
-		iptables -t nat -I PREROUTING $KP_INDEX -p tcp -j KOOLGAME
-	else
-		PR_INDEX=`iptables -t nat -L PREROUTING|tail -n +3|sed -n -e '/^prerouting_rule/='`|| 1
-		#如果kp没有运行，确保添加到prerouting_rule规则之后
-		let PR_INDEX+=1	
-		iptables -t nat -I PREROUTING $PR_INDEX -p tcp -j KOOLGAME
-	fi
+	[ -n "$KP_INDEX" ] && let RULE_INDEX=$KP_INDEX+1
+	#确保添加到默认规则之后
+	iptables -t nat -I PREROUTING $RULE_INDEX -p tcp -j KOOLGAME
 	iptables -t mangle -I PREROUTING 1 -p udp -j KOOLGAME
+	# router itself
+	iptables -t nat -I OUTPUT -j KOOLGAME
+	iptables -t nat -A OUTPUT -p tcp -m set --match-set router dst -j REDIRECT --to-ports 3333	
 }
 
 chromecast(){
 	LOG1=开启chromecast功能（DNS劫持功能）
-	kp_mode=`/koolshare/bin/dbus get koolproxy_mode`
-	kp_enable=`iptables -t nat -L PREROUTING | grep KOOLPROXY |wc -l`
 	chromecast_nu=`iptables -t nat -L PREROUTING -v -n --line-numbers|grep "dpt:53"|awk '{print $1}'`
 	is_right_lanip=`iptables -t nat -L PREROUTING -v -n --line-numbers|grep "dpt:53" |grep "$lan_ipaddr"`
 	
-	uci set shadowsocks.@global[0].dns_53=1
 	if [ -z "$chromecast_nu" ]; then
 		iptables -t nat -A PREROUTING -p udp --dport 53 -j DNAT --to $lan_ipaddr >/dev/null 2>&1
 		echo_date $LOG1
@@ -495,7 +517,6 @@ chromecast(){
 			echo_date DNS劫持规则已经添加，跳过~
 		fi
 	fi
-	uci commit
 }
 # =======================================================================================================
 load_nat(){
@@ -529,9 +550,6 @@ get_status(){
 	ps -l|grep $PPID|grep -v grep
 	echo ------------------------------------
 	iptables -nvL PREROUTING -t nat
-	#iptables -nvL KOOLGAME -t nat
-	#iptables -nvL KOOLGAME_EXT -t nat
-	#iptables -nvL KOOLGAME_GAM -t nat
 }
 
 detect_ss(){
